@@ -9,11 +9,13 @@ from data_generation.generate_reaction import generate_reaction
 from utils import DATA_DIR
 
 if __name__ == '__main__':
-    np.random.seed(42)
-
+    # Generate the mesh
     generate_mesh()
+
+    # Simulate the flow in the channel
     w = generate_flow()
 
+    # Simulate the reaction system to generate training, validation and test data
     c0_train, u_train, c_train, y_train = generate_reaction('Generating training data')
     c0_val, u_val, c_val, y_val = generate_reaction('Generating validation data')
     c0_test, u_test, c_test, y_test = generate_reaction('Generating test data')

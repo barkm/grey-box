@@ -17,9 +17,9 @@ def progress_bar(progress=None, size=25, ndigits=2):
 
 
 def load_torch_data(datafile):
+    """Load data as torch tensors"""
     data = np.load(datafile)
-    #c0 = torch.tensor(data['c0']).double()
-    c0 = torch.tensor(data['c'][0]).double()
+    c0 = torch.tensor(data['c0']).double()
     c = torch.tensor(data['c']).double()
     u = torch.tensor(data['u']).double()
     y = torch.tensor(data['y']).double()
@@ -27,8 +27,9 @@ def load_torch_data(datafile):
 
 
 def load_numpy_data(datafile):
+    """Load data as numpy arrays"""
     data = np.load(datafile)
-    c0 = data['c'][0]
+    c0 = data['c0']
     c = data['c']
     u = data['u']
     y = data['y']
@@ -36,6 +37,7 @@ def load_numpy_data(datafile):
 
 
 def observability_idx(coordinates, min_x, min_y, max_x, max_y, nx, ny, threshold=None):
+    """Compute indices of coordinates corresponding to sensors"""
     eps = 1e-3
 
     x_step = (max_x - min_x) / (nx + 1)
@@ -48,9 +50,11 @@ def observability_idx(coordinates, min_x, min_y, max_x, max_y, nx, ny, threshold
 
     obs_idx = []
     for coord in sensors:
+        # Compute distance to nearest coordinate
         diff = np.linalg.norm(coordinates - coord, axis=1)
         idx = np.argmin(diff)
         if threshold is not None:
+            # Do not place sensor if coordinate is not near enough
             if diff[idx] > threshold:
                 continue
         obs_idx.append(idx)
