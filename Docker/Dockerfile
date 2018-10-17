@@ -1,6 +1,8 @@
 # Use FEniCS base image
 FROM quay.io/fenicsproject/stable:2018.1.0.r3
 
+WORKDIR /home/fenics/shared
+
 # Install dolfin-adjoint
 RUN pip3 install git+https://bitbucket.org/barkm/pyadjoint.git@torch-fenics#egg=dolfin_adjoint
 

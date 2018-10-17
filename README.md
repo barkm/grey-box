@@ -65,7 +65,20 @@ _c<sub>2</sub>_ and _c<sub>3</sub>_ can me measured.
 ## Installation
 
 The method relies on the [`torch-fenics`](https://github.com/pbarkm/torch-fenics) package. 
-The provided [Dockerfile](Docker/Dockerfile) can be used to build a container with the necessary dependencies. 
+
+The provided [Dockerfile](Docker/Dockerfile) can be used to build a container with the necessary dependencies.
+Install [Docker](https://www.docker.com/), navigate to the [Docker](Docker) directory and build the Docker image
+
+```bash
+cd Docker
+docker build . -t grey-box
+```
+
+A Docker container with access to the current directory can then be started accordingly
+
+```bash
+docker run --rm -ti -v $(pwd):/home/fenics/shared grey-box
+```
 
 ## Instructions
 
