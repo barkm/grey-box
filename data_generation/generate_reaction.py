@@ -1,13 +1,14 @@
 import os
 
-from torch_fenics import FEniCSModel, FEniCSModule
+from torch_fenics import FEniCSModel, FEniCSModule, fenics_to_numpy
 
 from fenics import *
 from fenics_adjoint import *
 
 import torch
+import numpy as np
 
-from utils import DATA_DIR
+from utils import progress_bar, DATA_DIR, observability_idx
 
 
 class ReactionModel(FEniCSModel):
@@ -49,10 +50,17 @@ class ReactionModel(FEniCSModel):
     def diffusion(self, u, v):
         return self.diffusion_const * inner(grad(u), grad(v)) * dx
 
-    def forward(self, c_prev, w, u, f):
+    def forward(self, c_prev, w, u):
         c1_prev, c2_prev, c3_prev = split(c_prev)
         u1, u2, u3 = split(u)
-        f1, f2, f3 = split(f)
+
+        # Compute reaction rate
+        r = 2 * c1_prev ** 2 * c2_prev
+
+        # Compute reaction dynamics
+        f1 = -r
+        f2 = -2 * r
+        f3 = 8 * r
 
         # Compute advection terms
         a1 = self.advection(w, self.c1, self.v1)
@@ -88,21 +96,81 @@ class ReactionModel(FEniCSModel):
         return [Function(self.V),     # Previous concentrations
                 Function(self.W),     # Velocity field
                 Constant((0, 0, 0)),  # Input signals
-                Function(self.V),     # Estimated reaction dynamics
                 ]
 
 
-class WhiteBox(torch.nn.Module):
-    def __init__(self):
-        super(WhiteBox, self).__init__()
-        self.reaction_model = FEniCSModule(ReactionModel())
-        self.threshold = torch.nn.ReLU()
+class ObservationModel(torch.nn.Module):
+    def __init__(self, nx, ny, noise_std):
+        super(ObservationModel, self).__init__()
 
-    def forward(self, c_prev, w, u, f):
-        # Run the FEniCS Model
-        c_next = self.reaction_model(c_prev, w, u, f)
+        self.noise_std = noise_std
 
-        # Remove numerical artifacts
-        return self.threshold.forward(c_next)
+        coordinates = np.load(os.path.join(DATA_DIR, 'coordinates.npy'))
+
+        min_x, min_y = np.min(coordinates, axis=0)
+        max_x, max_y = np.max(coordinates, axis=0)
+
+        self.obs_idx = observability_idx(coordinates, min_x, min_y, max_x, max_y, nx, ny, 0.1)
+
+    def forward(self, white_box_output):
+        obs = white_box_output[:, self.obs_idx]
+        return np.maximum(obs + self.noise_std * torch.randn(obs.shape, dtype=torch.float64), 0)
 
 
+def random_signal(min_t, max_t, min_val, max_val, n):
+    sig = []
+    i = 0
+    while i < n:
+        t = np.random.randint(min_t, max_t)
+        c = (max_val - min_val) * np.random.rand() + min_val
+        j = 0
+        while i < n and j < t:
+            sig.append(c)
+            i += 1
+            j += 1
+    return np.array(sig)
+
+
+def generate_reaction(progress_bar_str):
+    # Create reaction model
+    reaction_model = ReactionModel()
+    reaction_module = FEniCSModule(reaction_model)
+
+    # Create observation model
+    observation_model = ObservationModel(20, 5, 0)
+
+    # Load velocity field
+    w = np.load(os.path.join(DATA_DIR, 'flow.npy'))
+
+    # Compute input signals
+    u1 = random_signal(5, 10, 5, 10, 50)
+    u2 = random_signal(5, 10, 5, 10, 50)
+    u3 = np.zeros(u1.shape)
+    u = np.vstack((u1, u2, u3)).transpose()
+
+    # Create initial condition
+    c0 = fenics_to_numpy(reaction_model.input_templates()[0])
+    c_prev = np.array([c0])
+
+    # Simulate
+    c = []
+    y = []
+    for i in range(50):
+        print('\r{}'.format(progress_bar_str), progress_bar((i+1) / 50), end='')
+        c_prev = reaction_module(c_prev, w[i:i+1], u[i:i+1])
+        c_prev = np.maximum(c_prev, 0)
+
+        # print('')
+        # print('u1:', u1[i])
+        # print('u2:', u2[i])
+        # print('w:', w[i][20])
+        # print('c:', c_prev[0, 20])
+        # print('')
+
+        y_ = observation_model(c_prev)
+
+        c.append(c_prev[0].numpy())
+        y.append(y_[0].numpy())
+    print('')
+
+    return c0, u, c, y

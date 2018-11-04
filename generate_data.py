@@ -16,6 +16,7 @@ if __name__ == '__main__':
     w = generate_flow()
 
     # Simulate the reaction system to generate training, validation and test data
+    np.random.seed(42)
     c0_train, u_train, c_train, y_train = generate_reaction('Generating training data')
     c0_val, u_val, c_val, y_val = generate_reaction('Generating validation data')
     c0_test, u_test, c_test, y_test = generate_reaction('Generating test data')

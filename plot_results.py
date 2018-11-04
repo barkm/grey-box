@@ -21,12 +21,14 @@ def plot_losses():
 
         ax.semilogy(losses_train)
         ax.semilogy(losses_val)
+        # ax.plot(losses_train)
+        # ax.plot(losses_val)
 
         ax.legend(['training loss', 'validation loss'])
 
 
 def plot_black_box():
-    black_box_file = os.path.join(RESULT_DIR, 'black_box.pt')
+    black_box_file = os.path.join(RESULT_DIR, 'best_black_box.pt')
 
     if os.path.exists(black_box_file):
         # Restore black-box
@@ -38,19 +40,19 @@ def plot_black_box():
         c2 = np.linspace(0, 0.5, 20)
         C1, C2 = np.meshgrid(c1, c2)
 
-        fhat = np.empty(list(C1.shape) + [3])
+        f_hat = np.empty(list(C1.shape) + [3])
         for i, c1_ in enumerate(c1):
             for j, c2_ in enumerate(c2):
                 inp = torch.tensor([[[c1_, c2_, 0]]]).double()
-                fhat[i, j, :] = black_box(inp).detach().numpy()
+                f_hat[i, j, :] = black_box(inp).detach().numpy()
 
         # Compute estimation of stoichometric coefficients and reaction rate
         q = black_box.state_dict()['neural_network.3.weight'].detach().numpy()
         q_min_idx = np.argmin(np.abs(q))
-        delta = q[q_min_idx]
+        delta = np.abs(q)[q_min_idx]
 
-        q_hat = np.abs(q) / np.min(np.abs(q))
-        rhat = fhat[:, :, q_min_idx].transpose() * delta
+        q_hat = np.abs(q) / delta
+        rhat = f_hat[:, :, q_min_idx].transpose() / q_hat[q_min_idx] * np.sign(q[q_min_idx])
 
         # Print coefficeint estimation
         print('alpha_hat =', q_hat[0, 0])
@@ -71,7 +73,6 @@ def plot_black_box():
 
 
 if __name__ == '__main__':
-
     # Plot training and validation loss
     plot_losses()
 

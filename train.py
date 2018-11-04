@@ -8,14 +8,16 @@ from grey_box.grey_box import GreyBox
 from utils import DATA_DIR, RESULT_DIR, progress_bar, load_torch_data
 
 
-def save_losses(save_path, losses, overwrite=False):
-    write_mode = 'w' if overwrite else 'a'
-    with open(save_path, write_mode) as f:
+def save_losses(save_path, losses):
+    with open(save_path, 'a') as f:
         for loss in losses:
             f.write(str(loss) + '\n')
 
 
 if __name__ == '__main__':
+    np.random.seed(23)
+    torch.manual_seed(23)
+
     # Load data
     c0_train, u_train, c_train, y_train = load_torch_data(os.path.join(DATA_DIR, 'training.npz'))
     c0_val, u_val, c_val, y_val = load_torch_data(os.path.join(DATA_DIR, 'validation.npz'))
@@ -37,7 +39,7 @@ if __name__ == '__main__':
         os.makedirs(RESULT_DIR)
 
     # Number of times to run the training loop
-    n_iterations = 1000
+    n_iterations = 2000
 
     losses_train = []
     losses_val = []

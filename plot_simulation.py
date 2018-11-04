@@ -85,4 +85,4 @@ if __name__ == '__main__':
         datafile2 = sys.argv[2]
         c01, u1, c1, y1 = load_numpy_data(datafile1)
         c02, u2, c2, y2 = load_numpy_data(datafile2)
-        plot_contour(c1 - c2)
+        plot_contour(np.abs(c1 - c2))
