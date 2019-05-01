@@ -1,4 +1,3 @@
-name: grey-box
 channels:
     - conda-forge
 dependencies:

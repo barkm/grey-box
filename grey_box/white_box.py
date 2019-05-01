@@ -2,15 +2,13 @@ import os
 
 from fenics import *
 from fenics_adjoint import *
-
-from torch_fenics import FEniCSModel, FEniCSModule
-
+import torch_fenics
 import torch
 
-from utils import DATA_DIR
+import utils
 
 
-class ReactionModel(FEniCSModel):
+class ReactionModel(torch_fenics.FEniCSModule):
     def __init__(self):
         super(ReactionModel, self).__init__()
 
@@ -21,7 +19,7 @@ class ReactionModel(FEniCSModel):
         self.diffusion_const = 0.02
 
         # Load mesh
-        self.mesh = Mesh(os.path.join(DATA_DIR, 'mesh.xml.gz'))
+        self.mesh = Mesh(os.path.join(utils.DATA_DIR, 'mesh.xml.gz'))
 
         # Create function spaces
         P1 = FiniteElement('P', triangle, 1)
@@ -49,7 +47,7 @@ class ReactionModel(FEniCSModel):
     def diffusion(self, u, v):
         return self.diffusion_const * inner(grad(u), grad(v)) * dx
 
-    def forward(self, c_prev, w, u, f):
+    def solve(self, c_prev, w, u, f):
         c1_prev, c2_prev, c3_prev = split(c_prev)
         u1, u2, u3 = split(u)
         f1, f2, f3 = split(f)
@@ -96,7 +94,7 @@ class ReactionModel(FEniCSModel):
 class WhiteBox(torch.nn.Module):
     def __init__(self):
         super(WhiteBox, self).__init__()
-        self.reaction_model = FEniCSModule(ReactionModel())
+        self.reaction_model = ReactionModel()
         self.threshold = torch.nn.ReLU()
 
     def forward(self, c_prev, w, u, f):

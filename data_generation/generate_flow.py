@@ -9,9 +9,9 @@ import tqdm
 import utils
 
 
-class FlowModel(torch_fenics.FEniCSModel):
+class Flow(torch_fenics.FEniCSModule):
     def __init__(self):
-        super(FlowModel, self).__init__()
+        super().__init__()
 
         # Load mesh
         self.mesh = Mesh(os.path.join(utils.DATA_DIR, 'mesh.xml.gz'))
@@ -57,7 +57,7 @@ class FlowModel(torch_fenics.FEniCSModel):
         self.d = 0.05 * CellDiameter(self.mesh)
 
 
-    def forward(self, w_prev):
+    def solve(self, w_prev):
         # Use Crank-Nicholson method
         wbar = 0.5 * (self.w + w_prev)
 
@@ -86,19 +86,16 @@ class FlowModel(torch_fenics.FEniCSModel):
 
 def generate_flow():
     # Create flow model
-    flow_model = FlowModel()
-
-    # Create PyTorch module
-    flow_module = torch_fenics.FEniCSModule(flow_model)
+    flow = Flow()
 
     # Create initial condition
-    w_prev = flow_model.numpy_input_templates()[0]
+    w_prev = flow.numpy_input_templates()[0]
     w_prev = np.array([w_prev])
 
     # Simulate
     w = []
     for i in tqdm.tqdm(range(100), desc='Simulating flow'):
-        w_prev = flow_module(w_prev)
+        w_prev = flow(w_prev)
         w.append(w_prev[0].numpy())
 
     # Save data_generation

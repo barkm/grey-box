@@ -10,9 +10,9 @@ import tqdm
 import utils
 
 
-class ReactionModel(torch_fenics.FEniCSModel):
+class Reaction(torch_fenics.FEniCSModule):
     def __init__(self):
-        super(ReactionModel, self).__init__()
+        super().__init__()
 
         # Define time step
         self.dt = 0.2
@@ -49,7 +49,7 @@ class ReactionModel(torch_fenics.FEniCSModel):
     def diffusion(self, u, v):
         return self.diffusion_const * inner(grad(u), grad(v)) * dx
 
-    def forward(self, c_prev, w, u):
+    def solve(self, c_prev, w, u):
         c1_prev, c2_prev, c3_prev = split(c_prev)
         u1, u2, u3 = split(u)
 
@@ -99,9 +99,9 @@ class ReactionModel(torch_fenics.FEniCSModel):
                 )
 
 
-class ObservationModel(torch.nn.Module):
+class Observe(torch.nn.Module):
     def __init__(self, nx, ny, noise_std):
-        super(ObservationModel, self).__init__()
+        super().__init__()
 
         self.noise_std = noise_std
 
@@ -133,11 +133,10 @@ def random_signal(min_t, max_t, min_val, max_val, n):
 
 def generate_reaction():
     # Create reaction model
-    reaction_model = ReactionModel()
-    reaction_module = torch_fenics.FEniCSModule(reaction_model)
+    reaction = Reaction()
 
     # Create observation model
-    observation_model = ObservationModel(20, 5, 0)
+    observe = Observe(20, 5, 0)
 
     # Load velocity field
     w = np.load(os.path.join(utils.DATA_DIR, 'flow.npy'))
@@ -149,16 +148,16 @@ def generate_reaction():
     u = np.vstack((u1, u2, u3)).transpose()
 
     # Create initial condition
-    c0 = reaction_model.numpy_input_templates()[0]
+    c0 = reaction.numpy_input_templates()[0]
     c_prev = np.array([c0])
 
     # Simulate
     c = []
     y = []
     for i in tqdm.tqdm(range(50), desc='Simulating reaction'):
-        c_prev = reaction_module(c_prev, w[i:i+1], u[i:i+1])
+        c_prev = reaction(c_prev, w[i:i+1], u[i:i+1])
         c_prev = np.maximum(c_prev, 0)
-        y_ = observation_model(c_prev)
+        y_ = observe(c_prev)
 
         c.append(c_prev[0].numpy())
         y.append(y_[0].numpy())

@@ -68,8 +68,7 @@ The necessary dependencies can be installed with [Conda](https://docs.conda.io/e
 
 ```bash
 git clone https://github.com/barkm/grey-box
-cd grey-box
-conda env create -f environment.yml
+conda env create -n grey-box -f environment.yml
 conda activate grey-box
 ```
 
@@ -129,4 +128,6 @@ and compared with the ground truth data by running
 python plot_simulation.py result/prediction.npz data/test.npz
 ```
 
+## References
 
+[Barkman, Patrik. "Grey-box modelling of distributed parameter systems." (2018).](http://kth.diva-portal.org/smash/record.jsf?pid=diva2%3A1274745&dswid=6513)
