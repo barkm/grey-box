@@ -1,10 +1,10 @@
 import os
 
-import torch
-import numpy as np
-
 from grey_box.white_box import WhiteBox
 from grey_box.black_box import BlackBox
+
+import torch
+import numpy as np
 
 from utils import observability_idx, DATA_DIR
 

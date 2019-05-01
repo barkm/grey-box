@@ -1,21 +1,20 @@
 import os
 
-from torch_fenics import FEniCSModel, FEniCSModule, fenics_to_numpy
-
+import torch_fenics
 from fenics import *
 from fenics_adjoint import *
-
 import numpy as np
+import tqdm
 
-from utils import progress_bar, DATA_DIR
+import utils
 
 
-class FlowModel(FEniCSModel):
+class FlowModel(torch_fenics.FEniCSModel):
     def __init__(self):
         super(FlowModel, self).__init__()
 
         # Load mesh
-        self.mesh = Mesh(os.path.join(DATA_DIR, 'mesh.xml.gz'))
+        self.mesh = Mesh(os.path.join(utils.DATA_DIR, 'mesh.xml.gz'))
 
         # Define function spaces
         WH = VectorElement('P', self.mesh.ufl_cell(), 1)
@@ -82,7 +81,7 @@ class FlowModel(FEniCSModel):
 
     def input_templates(self):
         # Input template of the velocity at the previous time step
-        return [Function(self.W_collapsed)]
+        return Function(self.W_collapsed)
 
 
 def generate_flow():
@@ -90,22 +89,20 @@ def generate_flow():
     flow_model = FlowModel()
 
     # Create PyTorch module
-    flow_module = FEniCSModule(flow_model)
+    flow_module = torch_fenics.FEniCSModule(flow_model)
 
     # Create initial condition
-    w_prev = fenics_to_numpy(flow_model.input_templates()[0])
+    w_prev = flow_model.numpy_input_templates()[0]
     w_prev = np.array([w_prev])
 
     # Simulate
     w = []
-    for i in range(100):
-        print('\rSimulating flow', progress_bar((i+1) / 100), end='')
+    for i in tqdm.tqdm(range(100), desc='Simulating flow'):
         w_prev = flow_module(w_prev)
         w.append(w_prev[0].numpy())
-    print('')
 
     # Save data_generation
-    np.save(os.path.join(DATA_DIR, 'flow.npy'), w[50:])
+    np.save(os.path.join(utils.DATA_DIR, 'flow.npy'), w[50:])
 
 
 

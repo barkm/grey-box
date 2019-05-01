@@ -21,8 +21,6 @@ def plot_losses():
 
         ax.semilogy(losses_train)
         ax.semilogy(losses_val)
-        # ax.plot(losses_train)
-        # ax.plot(losses_val)
 
         ax.legend(['training loss', 'validation loss'])
 
@@ -69,7 +67,6 @@ def plot_black_box():
         ax.legend(['R_hat', 'R'])
         ax.set_xlabel('c_1')
         ax.set_ylabel('c_2')
-
 
 
 if __name__ == '__main__':

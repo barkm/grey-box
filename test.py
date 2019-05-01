@@ -1,10 +1,11 @@
 import os
 
-import torch
-import numpy as np
+from grey_box.grey_box import GreyBox
 
 from utils import DATA_DIR, RESULT_DIR, load_torch_data
-from grey_box.grey_box import GreyBox
+
+import torch
+import numpy as np
 
 
 if __name__ == '__main__':

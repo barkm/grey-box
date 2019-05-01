@@ -1,9 +1,9 @@
 import os
 
-from torch_fenics import FEniCSModel, FEniCSModule
-
 from fenics import *
 from fenics_adjoint import *
+
+from torch_fenics import FEniCSModel, FEniCSModule
 
 import torch
 
@@ -85,11 +85,12 @@ class ReactionModel(FEniCSModel):
         return c_next
 
     def input_templates(self):
-        return [Function(self.V),     # Previous concentrations
+        return (Function(self.V),     # Previous concentrations
                 Function(self.W),     # Velocity field
                 Constant((0, 0, 0)),  # Input signals
                 Function(self.V),     # Estimated reaction dynamics
-                ]
+                )
+                
 
 
 class WhiteBox(torch.nn.Module):
@@ -99,10 +100,10 @@ class WhiteBox(torch.nn.Module):
         self.threshold = torch.nn.ReLU()
 
     def forward(self, c_prev, w, u, f):
-        # Run the FEniCS Model
+        # Run the FEniCS model
         c_next = self.reaction_model(c_prev, w, u, f)
 
         # Remove numerical artifacts
-        return self.threshold.forward(c_next)
+        return self.threshold(c_next)
 
 

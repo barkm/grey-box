@@ -17,9 +17,12 @@ if __name__ == '__main__':
 
     # Simulate the reaction system to generate training, validation and test data
     np.random.seed(42)
-    c0_train, u_train, c_train, y_train = generate_reaction('Generating training data')
-    c0_val, u_val, c_val, y_val = generate_reaction('Generating validation data')
-    c0_test, u_test, c_test, y_test = generate_reaction('Generating test data')
+    print('Generating training data')
+    c0_train, u_train, c_train, y_train = generate_reaction()
+    print('Generating validation data')
+    c0_val, u_val, c_val, y_val = generate_reaction()
+    print('Generating test data')
+    c0_test, u_test, c_test, y_test = generate_reaction()
 
     with open(os.path.join(DATA_DIR, 'training.npz'), 'wb') as f:
         np.savez(f, c0=c0_train, u=u_train, c=c_train, y=y_train)
@@ -29,4 +32,3 @@ if __name__ == '__main__':
 
     with open(os.path.join(DATA_DIR, 'test.npz'), 'wb') as f:
         np.savez(f, c0=c0_test, u=u_test, c=c_test, y=y_test)
-

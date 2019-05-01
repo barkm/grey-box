@@ -1,17 +1,16 @@
 import os
 
-from torch_fenics import FEniCSModel, FEniCSModule, fenics_to_numpy
-
+import torch_fenics
 from fenics import *
 from fenics_adjoint import *
-
 import torch
 import numpy as np
+import tqdm
 
-from utils import progress_bar, DATA_DIR, observability_idx
+import utils
 
 
-class ReactionModel(FEniCSModel):
+class ReactionModel(torch_fenics.FEniCSModel):
     def __init__(self):
         super(ReactionModel, self).__init__()
 
@@ -22,7 +21,7 @@ class ReactionModel(FEniCSModel):
         self.diffusion_const = 0.02
 
         # Load mesh
-        self.mesh = Mesh(os.path.join(DATA_DIR, 'mesh.xml.gz'))
+        self.mesh = Mesh(os.path.join(utils.DATA_DIR, 'mesh.xml.gz'))
 
         # Create function spaces
         P1 = FiniteElement('P', triangle, 1)
@@ -93,10 +92,11 @@ class ReactionModel(FEniCSModel):
         return c_next
 
     def input_templates(self):
-        return [Function(self.V),     # Previous concentrations
+        return (
+                Function(self.V),     # Previous concentrations
                 Function(self.W),     # Velocity field
-                Constant((0, 0, 0)),  # Input signals
-                ]
+                Constant((0, 0, 0))   # Input signals
+                )
 
 
 class ObservationModel(torch.nn.Module):
@@ -105,12 +105,12 @@ class ObservationModel(torch.nn.Module):
 
         self.noise_std = noise_std
 
-        coordinates = np.load(os.path.join(DATA_DIR, 'coordinates.npy'))
+        coordinates = np.load(os.path.join(utils.DATA_DIR, 'coordinates.npy'))
 
         min_x, min_y = np.min(coordinates, axis=0)
         max_x, max_y = np.max(coordinates, axis=0)
 
-        self.obs_idx = observability_idx(coordinates, min_x, min_y, max_x, max_y, nx, ny, 0.1)
+        self.obs_idx = utils.observability_idx(coordinates, min_x, min_y, max_x, max_y, nx, ny, 0.1)
 
     def forward(self, white_box_output):
         obs = white_box_output[:, self.obs_idx]
@@ -131,16 +131,16 @@ def random_signal(min_t, max_t, min_val, max_val, n):
     return np.array(sig)
 
 
-def generate_reaction(progress_bar_str):
+def generate_reaction():
     # Create reaction model
     reaction_model = ReactionModel()
-    reaction_module = FEniCSModule(reaction_model)
+    reaction_module = torch_fenics.FEniCSModule(reaction_model)
 
     # Create observation model
     observation_model = ObservationModel(20, 5, 0)
 
     # Load velocity field
-    w = np.load(os.path.join(DATA_DIR, 'flow.npy'))
+    w = np.load(os.path.join(utils.DATA_DIR, 'flow.npy'))
 
     # Compute input signals
     u1 = random_signal(5, 10, 5, 10, 50)
@@ -149,28 +149,18 @@ def generate_reaction(progress_bar_str):
     u = np.vstack((u1, u2, u3)).transpose()
 
     # Create initial condition
-    c0 = fenics_to_numpy(reaction_model.input_templates()[0])
+    c0 = reaction_model.numpy_input_templates()[0]
     c_prev = np.array([c0])
 
     # Simulate
     c = []
     y = []
-    for i in range(50):
-        print('\r{}'.format(progress_bar_str), progress_bar((i+1) / 50), end='')
+    for i in tqdm.tqdm(range(50), desc='Simulating reaction'):
         c_prev = reaction_module(c_prev, w[i:i+1], u[i:i+1])
         c_prev = np.maximum(c_prev, 0)
-
-        # print('')
-        # print('u1:', u1[i])
-        # print('u2:', u2[i])
-        # print('w:', w[i][20])
-        # print('c:', c_prev[0, 20])
-        # print('')
-
         y_ = observation_model(c_prev)
 
         c.append(c_prev[0].numpy())
         y.append(y_[0].numpy())
-    print('')
 
     return c0, u, c, y

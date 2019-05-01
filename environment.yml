@@ -1,0 +1,12 @@
+name: grey-box
+channels:
+    - conda-forge
+dependencies:
+    - pip
+    - python
+    - fenics
+    - mshr
+    - matplotlib
+    - tqdm
+    - pip:
+        - git+https://github.com/pbarkm/torch-fenics.git@master

@@ -9,13 +9,6 @@ DATA_DIR = os.path.join(ROOT, 'data')
 RESULT_DIR = os.path.join(ROOT, 'result')
 
 
-def progress_bar(progress=None, size=25, ndigits=2):
-    if progress < 0 or progress > 1:
-        raise ValueError('Progress has to be in [0, 1]')
-    return '['+ int(size * progress) * '#' + (size - int(size * progress)) * \
-           ' ' + '] {}%'.format(round(100*progress, ndigits))
-
-
 def load_torch_data(datafile):
     """Load data as torch tensors"""
     data = np.load(datafile)
